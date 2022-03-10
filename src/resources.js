@@ -9,13 +9,14 @@ export const instrument = [];
 
 export function loadBuffer(id, url) {
   buffer[id] = null;
-  fetch(url)
-  .then(response => response.arrayBuffer())
-  .then(audioData => ctx.decodeAudioData(audioData))
-  .then(decodedData => {
-    buffer[id] = decodedData;
-    bufferLoadCallback[id]?.forEach(callback => callback(decodedData));
-  });
+  return fetch(url)
+         .then(response => response.arrayBuffer())
+         .then(audioData => ctx.decodeAudioData(audioData))
+         .then(decodedData => {
+           buffer[id] = decodedData;
+           bufferLoadCallback[id]?.forEach(callback => callback(decodedData));
+           return Promise.resolve(decodedData);
+         });
 }
 
 export function onBufferLoad(id, callback) {

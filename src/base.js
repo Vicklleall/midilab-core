@@ -24,6 +24,21 @@ export class BaseNode {
       this.out.disconnect(node);
     }
   }
+
+  addEffect(eff) {
+    this.effects ??= [];
+    if (this.effects.length) {
+      const prevNode = this.effects[this.effects.length - 1];
+      prevNode.disconnect(this.out);
+      prevNode.connect(eff);
+      eff.connect(this.out);
+      this.effects.push(eff);
+    } else {
+      this.in.disconnect(this.out);
+      eff._connect(this.in);
+      eff.connect(this.out);
+    }
+  }
 }
 
 export const ctx = new AudioContext();

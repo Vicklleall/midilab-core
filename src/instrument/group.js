@@ -4,13 +4,13 @@ import { buffer as bufferPool } from '../resources';
 export class Group extends BaseNode {
   constructor() {
     super(new AudioWorkletNode(ctx, 'deliver'), ctx.createGain());
+    this.enabled = true;
     this.map = [];
     this.on = [];
     this._gain = 1;
     this.envelope = [];
-    this.dyn = [0, 127, 128];
     this.release = 0.2;
-    this.enabled = true;
+    this.dyn = [0, 127, 128];
     this.xFadeEnable = false;
   }
 
