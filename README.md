@@ -1,6 +1,31 @@
 ## midilab-core：轻量级Web数字音乐引擎
 
+![npm](https://img.shields.io/npm/v/@midilab/core)
+![NPM](https://img.shields.io/npm/l/@midilab/core)
+![GitHub Repo stars](https://img.shields.io/github/stars/vicklleall/midilab-core?style=social)
+
 ### 快速入门
+
+#### 安装
+
+npm：
+
+```
+npm i @midilab/core -S
+```
+
+```js
+// ES Module
+import MidiLabCore from '@midilab/core'
+// CommonJS
+const MidiLabCore = require('@midilab/core');
+```
+
+浏览器：
+
+```html
+<script src="https://cdn.jsdelivr.net/npm/@midilab/core/dist/midilab-core.min.js"></script>
+```
 
 #### 初始化
 

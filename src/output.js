@@ -1,5 +1,5 @@
-import { BaseNode, ctx, mainOutput } from '../base';
-import { output } from '../resources';
+import { BaseNode, ctx, mainOutput } from './base';
+import { output } from './resources';
 
 export class Output extends BaseNode {
   constructor() {
