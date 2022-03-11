@@ -38,6 +38,7 @@ export class Group extends BaseNode {
   disableXFade() {
     this.xFadeEnable = false;
     this.out.gain.value = this._gain;
+    this.out.gain.cancelScheduledValues(ctx.currentTime);
   }
   xFade(v, time = 0) {
     if (!time) time = ctx.currentTime;

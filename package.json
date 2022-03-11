@@ -1,7 +1,7 @@
 {
   "name": "@midilab/core",
-  "version": "0.1.0",
-  "description": "",
+  "version": "0.1.1",
+  "description": "轻量级Web数字音乐引擎",
   "scripts": {
     "build": "node build.js"
   },

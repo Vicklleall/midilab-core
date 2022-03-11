@@ -1,33 +1,19 @@
-import { BaseNode, ctx, mainOutput, init } from './base';
-
-import * as res from './resources';
-import * as utils from './utils';
-
-import effects from './effects/index';
-
+import { ctx, getCtx } from './base';
 import { Output } from './output';
-import { Instrument } from './instrument/index';
 
-const core = {
-  res, utils, effects,
-  BaseNode, Output, Instrument,
+export { BaseNode, ctx, mainOutput } from './base';
 
-  get ctx() {
-    return ctx;
-  },
-  get mainOutput() {
-    return mainOutput;
-  },
+export * as res from './resources';
+export * as utils from './utils';
+export * as effects from './effects/index';
 
-  async init() {
-    init();
-    await ctx.audioWorklet.addModule(URL.createObjectURL(
-      new Blob([
-        "registerProcessor('deliver',class extends AudioWorkletProcessor{process(i,o){for(let n=0;n<i.length;n++)for(let m=i[n].length;m--;)o[n][m].set(i[n][m]);return true}})"
-      ], {type: 'text/javascript'})
-    ));
-    new Output();
-  }
-};
+export { Output } from './output';
+export { Instrument } from './instrument/index';
 
-export default core;
+export async function init() {
+  getCtx();
+  await ctx.audioWorklet.addModule(URL.createObjectURL(
+    new Blob([__INCLUDE__['processor.js']], {type: 'text/javascript'})
+  ));
+  new Output();
+}

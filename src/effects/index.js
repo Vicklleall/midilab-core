@@ -1,5 +1,1 @@
-import { Convolver } from './reverb';
-
-export default {
-  Convolver
-};
+export { Convolver } from './reverb';

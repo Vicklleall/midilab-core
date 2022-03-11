@@ -41,10 +41,10 @@ export class BaseNode {
   }
 }
 
-export let ctx;
-export let mainOutput;
+export let ctx = null;
+export let mainOutput = null;
 
-export const init = () => {
+export const getCtx = () => {
   ctx = new AudioContext();
   mainOutput = new BaseNode(ctx.createGain(), ctx.destination);
 };

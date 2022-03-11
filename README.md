@@ -16,7 +16,7 @@ npm i @midilab/core -S
 
 ```js
 // ES Module
-import MidiLabCore from '@midilab/core'
+import * as MidiLabCore from '@midilab/core'
 // CommonJS
 const MidiLabCore = require('@midilab/core');
 ```
@@ -24,7 +24,7 @@ const MidiLabCore = require('@midilab/core');
 浏览器：
 
 ```html
-<script src="https://cdn.jsdelivr.net/npm/@midilab/core/dist/midilab-core.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@midilab/core@0.1.1/dist/midilab-core.min.js"></script>
 ```
 
 #### 初始化
@@ -68,7 +68,7 @@ MidiLabCore.res.onBufferLoad('Piano-f', buffer => { ... });
 #### 创建乐器
 
 ```js
-// new MidiLab.core.Instrument(outputId = 0);
+// new MidiLabCore.Instrument(outputId = 0);
 const Piano = new MidiLabCore.Instrument();
 ```
 
@@ -116,7 +116,7 @@ group.disableXFade(); // 关闭动态过渡
 ##### 添加音符
 
 ```js
-// new MidiLab.core.Instrument.Zone(src, root, tune, start, duration);
+// new MidiLabCore.Instrument.Zone(src, root, tune, start, duration);
 const zone = new MidiLabCore.Instrument.Zone('Piano-f', 60, 0, 4, 4);
 ```
 
@@ -163,4 +163,19 @@ Piano.playNote(60, 5, 0.5, 64);
 Piano.playNote(60);
 ...
 Piano.releaseNote(60); // 之后需要释放音符
+```
+
+#### 添加效果
+
+组、乐器、输出都可以添加效果器
+
+例如在0号输出上添加混响效果：
+
+```js
+// 加载混响采样
+MidiLabCore.res.loadBuffer('conv/hall', 'sample/conv/hall.wav');
+// 创建混响器 Convolver(src, dry = 1, wet = 1)
+const conv = new MidiLabCore.effects.Convolver('conv/hall', 1, 1);
+// 添加到0号输出
+MidiLabCore.res.output[0].addEffect(conv);
 ```
