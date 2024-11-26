@@ -3,7 +3,7 @@ import { output } from './resources';
 
 export class Output extends BaseNode {
   constructor() {
-    super(new AudioWorkletNode(ctx, 'deliver'), ctx.createGain());
+    super(ctx.createGain(), ctx.createGain());
     this.connect(mainOutput);
     output.push(this);
   }

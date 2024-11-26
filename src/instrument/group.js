@@ -1,86 +1,113 @@
 import { BaseNode, ctx } from '../base';
 import { buffer as bufferPool } from '../resources';
+import { EXPONENTIAL, EVENT_CHECK_XFADE } from '../constants';
+import { scheduleCheckEvent } from '../scheduler';
 
 export class Group extends BaseNode {
   constructor() {
-    super(new AudioWorkletNode(ctx, 'deliver'), ctx.createGain());
+    super(ctx.createGain(), ctx.createGain());
     this.enabled = true;
     this.map = [];
-    this.on = [];
-    this._gain = 1;
     this.envelope = [];
     this.release = 0.2;
-    this.dyn = [0, 127, 128];
-    this.xFadeEnable = false;
+    this.dynamics = [0, 127, 128];
+    this.xFadeEnabled = false;
+    this.xFadeNote = new Set();
+    this.onNote = [];
+    this._pedal = false;
+    this.pedalNote = new Set();
   }
 
   set gain(value) {
-    if (!this.xFadeEnable) this.out.gain.value = value;
-    this._gain = value;
+    this.out.gain.value = value;
   }
   get gain() {
-    return this._gain;
+    return this.out.gain.value;
   }
 
-  setDyn(L, M, R) {
-    this.dyn[0] = L;
-    this.dyn[1] = M;
-    this.dyn[2] = R;
+  set pedalOn(value) {
+    this._pedal = value;
+    if (!value && this.pedalNote.size) {
+      for (const src of this.pedalNote) {
+        if (src.dynamics) this.xFadeNote.delete(src);
+        this.noteOff(src);
+      }
+    }
   }
-  getDyn(v) {
-    if (v <= this.dyn[0] || v >= this.dyn[2]) return 0;
-    if (v <= this.dyn[1]) return (v - this.dyn[0]) / (this.dyn[1] - this.dyn[0]);
-    return (v - this.dyn[1]) / (this.dyn[2] - this.dyn[1]);
+  get pedalOn() {
+    return this._pedal;
   }
-  enableXFade() {
-    this.xFadeEnable = true;
+
+  setDynamics(L, M, R) {
+    this.dynamics[0] = L;
+    this.dynamics[1] = M;
+    this.dynamics[2] = R;
   }
-  disableXFade() {
-    this.xFadeEnable = false;
-    this.out.gain.value = this._gain;
-    this.out.gain.cancelScheduledValues(ctx.currentTime);
-  }
-  xFade(v, time = 0) {
-    if (!time) time = ctx.currentTime;
-    this.out.gain.setValueAtTime(this.getDyn(v) * this._gain, time);
+  getDynamics(v) {
+    if (v <= this.dynamics[0] || v >= this.dynamics[2]) return 0;
+    if (v <= this.dynamics[1]) return (v - this.dynamics[0]) / (this.dynamics[1] - this.dynamics[0]);
+    return 1 - (v - this.dynamics[1]) / (this.dynamics[2] - this.dynamics[1]);
   }
 
   addZone(zone, from, to) {
     for (let i = from; i <= to; i++) this.map[i] = zone;
   }
 
-  playNote(note, time = 0, duration = 0, velocity = 95) {
+  xFade(value, time) {
+    if (this.xFadeEnabled) {
+      let vol = this.getDynamics(value);
+      for (const src of this.xFadeNote) {
+        if (time < src.stopTime) {
+          src.dynamics.gain.setValueAtTime(vol, time);
+        }
+      }
+    }
+  }
+
+  setXFadeCheck(time) {
+    if (this.xFadeEnabled) {
+      scheduleCheckEvent(this, EVENT_CHECK_XFADE, time);
+    }
+  }
+  checkXFade() {
+    const time = ctx.currentTime;
+    for (const src of this.xFadeNote) {
+      if (time >= src.stopTime) this.xFadeNote.delete(src);
+    }
+  }
+
+  playNote(note, velocity, time, duration) {
     const zone = this.map[note];
     if (zone) {
       if (!bufferPool[zone.src]) return;
-      let vol = this.xFadeEnable ? 1 : this.getDyn(velocity);
+      let vol = this.xFadeEnabled ? 1 : this.getDynamics(velocity);
       if (vol <= 0) return;
       const tune = note - zone.root + zone.tune;
       const src = ctx.createBufferSource();
       const envelope = ctx.createGain();
       src.buffer = bufferPool[zone.src];
       src.envelope = envelope;
-      if (tune) src.playbackRate.value = 2 ** (tune / 12);
       src.connect(envelope);
-      envelope.connect(this.in);
-      if (!time) time = ctx.currentTime;
+      if (this.xFadeEnabled) {
+        const dynamics = ctx.createGain();
+        src.dynamics = dynamics;
+        envelope.connect(dynamics);
+        dynamics.connect(this.in);
+        this.xFadeNote.add(src);
+      } else {
+        envelope.connect(this.in);
+      }
+      if (tune) src.playbackRate.value = 2 ** (tune / 12);
       if (this.envelope.length) {
         envelope.gain.setValueAtTime(0, time);
         for (const point of this.envelope) {
-          switch (point.type) {
-            case 0:
-              envelope.gain.linearRampToValueAtTime(
-                point.value * vol, time + point.time
-              );
-              break;
-            case 1:
-              envelope.gain.exponentialRampToValueAtTime(
-                point.value * vol, time + point.time
-              );
-              break;
+          if (point.type === EXPONENTIAL) {
+            envelope.gain.exponentialRampToValueAtTime(point.value * vol, time + point.time);
+          } else {
+            envelope.gain.linearRampToValueAtTime(point.value * vol, time + point.time);
           }
         }
-      } else if (vol < 1) {
+      } else {
         envelope.gain.value = vol;
       }
       if (zone.loop) {
@@ -90,17 +117,32 @@ export class Group extends BaseNode {
       }
       src.start(time, zone.start, zone.duration);
       if (duration) {
-        this.releaseNote(src, time + duration);
+        this.noteOff(src, time + duration);
+        this.setXFadeCheck(time + duration);
       } else {
-        if (this.on[note]) this.releaseNote(this.on[note], 0);
-        this.on[note] = src;
+        src.stopTime = Infinity;
+        this.releaseNote(note);
+        this.onNote[note] = src;
       }
     }
   }
-  releaseNote(src, time = 0) {
-    if (!time) time = ctx.currentTime;
-    src.envelope.gain.cancelScheduledValues(time);
+  noteOff(src, time = ctx.currentTime) {
+    src.stopTime = time;
+    src.dynamics?.gain.cancelAndHoldAtTime(time);
+    src.envelope.gain.cancelAndHoldAtTime(time);
     src.envelope.gain.setTargetAtTime(0, time, this.release / 4);
     src.stop(time + this.release);
+  }
+  releaseNote(note) {
+    const src = this.onNote[note];
+    if (src) {
+      if (this.pedalOn) {
+        this.pedalNote.add(src);
+      } else {
+        if (src.dynamics) this.xFadeNote.delete(src);
+        this.noteOff(src);
+      }
+      this.onNote[note] = null;
+    }
   }
 }

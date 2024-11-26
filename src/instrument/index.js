@@ -6,11 +6,10 @@ import { Group } from './group';
 
 export class Instrument extends BaseNode {
   constructor(outputId = 0) {
-    super(new AudioWorkletNode(ctx, 'deliver'), ctx.createGain());
-    this.setOutput(outputId);
+    super(ctx.createGain(), ctx.createGain());
     this.group = [];
-    this.dyn = 127;
     instrument.push(this);
+    this.setOutput(outputId);
   }
 
   setOutput(outputId) {
@@ -27,25 +26,19 @@ export class Instrument extends BaseNode {
     return group;
   }
 
-  xFade(v, time = 0) {
-    this.dyn = v;
-    for (const group of this.group) {
-      if (group.enabled && group.xFadeEnable) group.xFade(v, time);
-    }
+  xFade(value, time) {
+    for (const group of this.group) group.xFade(value, time);
   }
 
-  playNote(note, time = 0, duration = 0, velocity = this.dyn) {
+  playNote(note, velocity = 95, time = 0, duration = 0) {
+    if (time === 0) time = ctx.currentTime;
     for (const group of this.group) {
-      if (group.enabled) group.playNote(note, time, duration, velocity);
+      if (group.enabled) group.playNote(note, velocity, time, duration);
     }
   }
-  releaseNote(note, time = 0) {
+  releaseNote(note) {
     for (const group of this.group) {
-      const src = group.on[note]
-      if (src) {
-        group.releaseNote(src, time);
-        group.on[note] = null;
-      }
+      if (group.enabled) group.releaseNote(note);
     }
   }
 

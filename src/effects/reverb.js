@@ -1,42 +1,33 @@
-import { ctx } from '../base';
+import { BaseNode, ctx } from '../base';
 import { onBufferLoad } from '../resources';
 
-export class Convolver {
+export class Convolver extends BaseNode {
   constructor(src, dry = 1, wet = 1) {
+    super(ctx.createGain(), ctx.createGain(), false);
     this.conv = ctx.createConvolver();
-    this.dry = ctx.createGain();
-    this.dry.gain.value = dry;
-    this.wet = ctx.createGain();
-    this.wet.gain.value = wet;
-    this.conv.connect(this.wet);
+    this.dryGain = ctx.createGain();
+    this.wetGain = ctx.createGain();
+    this.in.connect(this.conv);
+    this.in.connect(this.dryGain);
+    this.conv.connect(this.wetGain);
+    this.dryGain.connect(this.out);
+    this.wetGain.connect(this.out);
+    this.dry = dry;
+    this.wet = wet;
     onBufferLoad(src, buffer => {
       this.conv.buffer = buffer;
     });
   }
-  _connect(audioNode) {
-    audioNode.connect(this.conv);
-    audioNode.connect(this.dry);
+  set dry(v) {
+    this.dryGain.gain.value = v;
   }
-  _disconnect(audioNode) {
-    audioNode.disconnect(this.conv);
-    audioNode.disconnect(this.dry);
+  set wet(v) {
+    this.wetGain.gain.value = v;
   }
-  connect(node) {
-    if (node._connect) {
-      node._connect(this.dry);
-      node._connect(this.wet);
-    } else {
-      this.dry.connect(node);
-      this.wet.connect(node);
-    }
+  get dry() {
+    return this.dryGain.gain.value;
   }
-  disconnect(node) {
-    if (node._disconnect) {
-      node._disconnect(this.dry);
-      node._disconnect(this.wet);
-    } else {
-      this.dry.disconnect(node);
-      this.wet.disconnect(node);
-    }
+  get wet() {
+    return this.wetGain.gain.value;
   }
 }
